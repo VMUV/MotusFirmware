@@ -40,10 +40,16 @@
 #include "messagePassing.h"
 #include "adc.h"
 
+#define SIMULATOR
 
+#ifdef SIMULATOR
+#define LED_PORT    GPIO_PORT_P1
+#define LED_PIN1    GPIO_PIN0
+#else
 #define LED_PORT    GPIO_PORT_P6
 #define LED_PIN1    GPIO_PIN4
 #define LED_PIN2	GPIO_PIN5
+#endif /* SIMULATOR */
 
 typedef struct
 {
@@ -74,7 +80,9 @@ void initDEV1()
 	PMM_setVCore(PMM_CORE_LEVEL_2);
 	USBHAL_initPorts();
 	USBHAL_initClocks(8000000);   // Config clocks. MCLK=SMCLK=FLL=8MHz; ACLK=REFO=32kHz
+#ifndef SIMULATOR
 	USBHAL_initADC12_A();
+#endif /* SIMULATOR */
 	USB_setup(TRUE, TRUE); // Init USB & events; if a host is present, connect
 
 	__enable_interrupt();
@@ -85,7 +93,9 @@ void usbStateMain()
 	switch (USB_getConnectionState())
 	{
 	case ST_ENUM_ACTIVE:
+#ifndef SIMULATOR
 		servicePeripherals();
+#endif /* SIMULATOR */
 		serviceUSBConnection();
 		break;
 
@@ -116,6 +126,16 @@ void servicePeripherals()
 
 void serviceUSBConnection()
 {
+#ifdef SIMULATOR
+    static uint16_t newVal = 0;
+    uint8_t i;
+    for (i = 0; i < 9; i++)
+        gDev1Rpt.padValuesInCnts[i] = newVal;
+    newVal++;
+    USBHID_sendReport((void *)&gDev1Rpt, HID0_INTFNUM);
+    GPIO_toggleOutputOnPin(LED_PORT, LED_PIN1);
+    __delay_cycles(1000);
+#else
 	if (Msg_GetNewPadDataAvailable())
 	{
 		Msg_ClrNewPadDataAvailable();
@@ -123,6 +143,7 @@ void serviceUSBConnection()
 		USBHID_sendReport((void *)&gDev1Rpt, HID0_INTFNUM);
 		GPIO_toggleOutputOnPin(LED_PORT, LED_PIN1);
 	}
+#endif /* SIMULATOR */
 }
 
 void serviceUSBDisconnect()
