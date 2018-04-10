@@ -40,7 +40,8 @@
 #include "messagePassing.h"
 #include "adc.h"
 
-#define SIMULATOR
+// Un-comment if using the dev kit simulator
+//#define SIMULATOR
 
 #ifdef SIMULATOR
 #define LED_PORT    GPIO_PORT_P1
